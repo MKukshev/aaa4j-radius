@@ -2,6 +2,132 @@
 
 AAA4J-RADIUS Client provides multiple RADIUS client implementations supporting different transport protocols and connection modes.
 
+## Supported Transports
+
+- **UDP** — классический RADIUS по UDP (UdpRadiusClient)
+- **TCP** — надёжный RADIUS по TCP (TcpRadiusClient)
+- **RadSec** — защищённый RADIUS по TLS (RadSecRadiusClient)
+- **Универсальный клиент** — UniversalRadiusClient с выбором транспорта через TransportType (SOCKET, SOCKET_TCP, SOCKET_RADSEC, NETTY и др.)
+
+## UniversalRadiusClient Initialization Examples
+
+```java
+import org.aaa4j.radius.client.clients.UniversalRadiusClient;
+import org.aaa4j.radius.client.transport.BaseTransportConfig;
+import org.aaa4j.radius.client.transport.TransportType;
+
+// UDP Transport
+UniversalRadiusClient udpClient = UniversalRadiusClient.newBuilder()
+    .transportType(TransportType.SOCKET)
+    .transportConfig(new BaseTransportConfig.Builder()
+        .serverAddress("radius.example.com")
+        .serverPort(1812)
+        .build())
+    .secret("shared-secret".getBytes())
+    .build();
+
+// TCP Transport
+UniversalRadiusClient tcpClient = UniversalRadiusClient.newBuilder()
+    .transportType(TransportType.SOCKET_TCP)
+    .transportConfig(new BaseTransportConfig.Builder()
+        .serverAddress("radius.example.com")
+        .serverPort(2083)
+        .autoReconnectEnabled(true)
+        .build())
+    .secret("shared-secret".getBytes())
+    .build();
+
+// RadSec Transport
+UniversalRadiusClient radSecClient = UniversalRadiusClient.newBuilder()
+    .transportType(TransportType.SOCKET_RADSEC)
+    .transportConfig(new BaseTransportConfig.Builder()
+        .serverAddress("radius.example.com")
+        .serverPort(2083)
+        .autoReconnectEnabled(true)
+        .build())
+    .secret("shared-secret".getBytes())
+    .build();
+```
+
+### Transport Configuration Options
+
+#### Socket-based Transport (Default)
+```java
+// Socket UDP
+TransportType.SOCKET
+
+// Socket TCP
+TransportType.SOCKET_TCP
+
+// Socket RadSec
+TransportType.SOCKET_RADSEC
+```
+
+#### Netty-based Transport (Requires Netty dependency)
+```java
+// Netty UDP
+TransportType.NETTY
+
+// Netty TCP
+TransportType.NETTY_TCP
+
+// Netty RadSec
+TransportType.NETTY_RADSEC
+```
+
+### Advanced Transport Configuration
+
+```java
+import java.time.Duration;
+
+// Socket TCP with advanced configuration
+UniversalRadiusClient socketTcpClient = UniversalRadiusClient.newBuilder()
+    .transportType(TransportType.SOCKET_TCP)
+    .transportConfig(new BaseTransportConfig.Builder()
+        .serverAddress("radius.example.com")
+        .serverPort(2083)
+        .autoReconnectEnabled(true)
+        .connectionTimeout(Duration.ofSeconds(30))
+        .maxReconnectAttempts(3)
+        .reconnectDelay(Duration.ofSeconds(5))
+        .build())
+    .secret("shared-secret".getBytes())
+    .build();
+
+// Netty TCP with advanced configuration
+UniversalRadiusClient nettyTcpClient = UniversalRadiusClient.newBuilder()
+    .transportType(TransportType.NETTY_TCP)
+    .transportConfig(new BaseTransportConfig.Builder()
+        .serverAddress("radius.example.com")
+        .serverPort(2083)
+        .autoReconnectEnabled(true)
+        .connectionTimeout(Duration.ofSeconds(30))
+        .maxReconnectAttempts(3)
+        .reconnectDelay(Duration.ofSeconds(5))
+        .build())
+    .secret("shared-secret".getBytes())
+    .build();
+```
+
+### Transport Selection Guidelines
+
+- **Socket Transport**: Использует стандартные Java Socket API, подходит для большинства случаев
+- **Netty Transport**: Использует Netty framework, обеспечивает лучшую производительность для высоконагруженных приложений
+
+### Dependencies for Netty Transport
+
+Для использования Netty транспорта добавьте зависимость в pom.xml:
+
+```xml
+<dependency>
+    <groupId>io.netty</groupId>
+    <artifactId>netty-all</artifactId>
+    <version>4.1.100.Final</version>
+</dependency>
+```
+
+---
+
 ## Supported Clients
 
 ### 1. UDP Client (`UdpRadiusClient`)

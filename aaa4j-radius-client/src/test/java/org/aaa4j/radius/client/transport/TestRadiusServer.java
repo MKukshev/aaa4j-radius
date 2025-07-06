@@ -16,16 +16,14 @@
 
 package org.aaa4j.radius.client.transport;
 
-import org.aaa4j.radius.core.packet.Packet;
-import org.aaa4j.radius.core.packet.packets.AccessAccept;
-import org.aaa4j.radius.core.packet.packets.AccessReject;
-import org.aaa4j.radius.core.packet.packets.AccessRequest;
-import org.aaa4j.radius.core.packet.PacketCodec;
-import org.aaa4j.radius.core.dictionary.dictionaries.StandardDictionary;
-
-import java.net.InetSocketAddress;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+
+import org.aaa4j.radius.core.dictionary.dictionaries.StandardDictionary;
+import org.aaa4j.radius.core.packet.Packet;
+import org.aaa4j.radius.core.packet.PacketCodec;
+import org.aaa4j.radius.core.packet.packets.AccessAccept;
+import org.aaa4j.radius.core.packet.packets.AccessReject;
 
 /**
  * Тестовый RADIUS сервер для тестирования транспортов.
@@ -327,16 +325,35 @@ public class TestRadiusServer {
         }
 
         public void start() throws Exception {
-            // Создаем простой SSL контекст для тестирования
+            // Загружаем keystore (PKCS12) и truststore (JKS)
+            String basePath = "src/test/resources/certs/";
+            String keystorePath = basePath + "server.p12";
+            String truststorePath = basePath + "truststore.jks";
+            char[] password = "changeit".toCharArray();
+
+            java.security.KeyStore keyStore = java.security.KeyStore.getInstance("PKCS12");
+            try (java.io.InputStream keyStoreStream = new java.io.FileInputStream(keystorePath)) {
+                keyStore.load(keyStoreStream, password);
+            }
+            javax.net.ssl.KeyManagerFactory kmf = javax.net.ssl.KeyManagerFactory.getInstance(javax.net.ssl.KeyManagerFactory.getDefaultAlgorithm());
+            kmf.init(keyStore, password);
+
+            java.security.KeyStore trustStore = java.security.KeyStore.getInstance("JKS");
+            try (java.io.InputStream trustStoreStream = new java.io.FileInputStream(truststorePath)) {
+                trustStore.load(trustStoreStream, password);
+            }
+            javax.net.ssl.TrustManagerFactory tmf = javax.net.ssl.TrustManagerFactory.getInstance(javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm());
+            tmf.init(trustStore);
+
             javax.net.ssl.SSLContext sslContext = javax.net.ssl.SSLContext.getInstance("TLS");
-            sslContext.init(null, new javax.net.ssl.TrustManager[]{new TrustAllTrustManager()}, null);
-            
+            sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+
             javax.net.ssl.SSLServerSocketFactory factory = sslContext.getServerSocketFactory();
             serverSocket = (javax.net.ssl.SSLServerSocket) factory.createServerSocket(port);
             serverSocket.setEnabledProtocols(new String[]{"TLSv1.2", "TLSv1.3"});
-            
+
             running = true;
-            
+
             Thread serverThread = new Thread(() -> {
                 while (running) {
                     try {
@@ -419,14 +436,5 @@ public class TestRadiusServer {
                 }
             }
         }
-    }
-
-    /**
-     * TrustManager, который доверяет всем сертификатам (только для тестирования).
-     */
-    private static class TrustAllTrustManager implements javax.net.ssl.X509TrustManager {
-        public java.security.cert.X509Certificate[] getAcceptedIssuers() { return new java.security.cert.X509Certificate[0]; }
-        public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType) {}
-        public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType) {}
     }
 } 
