@@ -1,28 +1,36 @@
-# AAA4J-RADIUS
+# AAA4J-RADIUS Client
 
-AAA4J-RADIUS is a comprehensive Java library for RADIUS (Remote Authentication Dial-In User Service) protocol implementation. It provides both client and server implementations with support for multiple transport protocols.
+AAA4J-RADIUS Client provides multiple RADIUS client implementations supporting different transport protocols and connection modes.
 
-## Features
+## Supported Clients
 
-### Client Implementations
+### 1. UDP Client (`UdpRadiusClient`)
+- **Transport**: UDP
+- **Mode**: Stateless (connectionless)
+- **Features**: Retransmission strategy, synchronous operations
+- **Use Case**: Simple RADIUS authentication, legacy systems
 
-- **UDP Client** (`UdpRadiusClient`): Traditional UDP-based RADIUS client
-- **TCP Client** (`TcpRadiusClient`): TCP-based RADIUS client with persistent connections
-- **RadSec Client** (`RadSecRadiusClient`): TLS-secured RADIUS client (RadSec protocol)
+### 2. TCP Client (`TcpRadiusClient`)
+- **Transport**: TCP
+- **Mode**: Stateful (persistent connections)
+- **Features**: 
+  - Synchronous and asynchronous operations
+  - Connection management (keep-alive, auto-reconnect)
+  - Configurable connection settings
+- **Use Case**: High-performance applications, reliable connections
 
-### Key Features
-
-- **Multiple Transport Protocols**: UDP, TCP, and TLS (RadSec)
-- **Synchronous and Asynchronous Operations**: Support for both blocking and non-blocking operations
-- **Connection Management**: Keep-alive, auto-reconnect, and connection pooling
-- **Retransmission Strategy**: Configurable retransmission strategies for handling network failures
-- **Configurable Settings**: Timeouts, retry strategies, and TLS configuration
-- **Thread Safety**: Safe for concurrent use in multi-threaded applications
-- **Extensible Architecture**: Easy to extend with custom implementations
+### 3. RadSec Client (`RadSecRadiusClient`)
+- **Transport**: TLS over TCP (RadSec protocol)
+- **Mode**: Stateful (persistent secure connections)
+- **Features**:
+  - All TCP client features
+  - TLS encryption and security
+  - Configurable TLS settings
+- **Use Case**: Secure RADIUS communication, enterprise environments
 
 ## Quick Start
 
-### UDP Client (Traditional)
+### UDP Client Example
 
 ```java
 import org.aaa4j.radius.client.clients.UdpRadiusClient;
@@ -41,11 +49,10 @@ Packet request = new AccessRequest.Builder()
 Packet response = client.send(request);
 ```
 
-### TCP Client (Persistent Connections)
+### TCP Client Example
 
 ```java
 import org.aaa4j.radius.client.clients.TcpRadiusClient;
-import org.aaa4j.radius.client.IntervalRetransmissionStrategy;
 import org.aaa4j.radius.core.packet.packets.AccessRequest;
 import java.net.InetSocketAddress;
 import java.time.Duration;
@@ -53,7 +60,6 @@ import java.time.Duration;
 TcpRadiusClient client = TcpRadiusClient.newBuilder()
     .address(new InetSocketAddress("radius.example.com", 2083))
     .secret("shared-secret".getBytes())
-    .retransmissionStrategy(new IntervalRetransmissionStrategy(3, Duration.ofSeconds(5)))
     .connectionConfig(
         TcpRadiusClient.ConnectionConfig.newBuilder()
             .keepAliveInterval(Duration.ofMinutes(5))
@@ -69,13 +75,16 @@ TcpRadiusClient client = TcpRadiusClient.newBuilder()
 client.connect().get();
 
 // Send request
+Packet request = new AccessRequest.Builder()
+    .userName("testuser")
+    .build();
 Packet response = client.send(request);
 
 // Close connection
 client.close().get();
 ```
 
-### RadSec Client (TLS Secured)
+### RadSec Client Example
 
 ```java
 import org.aaa4j.radius.client.clients.RadSecRadiusClient;
@@ -102,15 +111,18 @@ RadSecRadiusClient client = RadSecRadiusClient.newBuilder()
 client.connect().get();
 
 // Send request
+Packet request = new AccessRequest.Builder()
+    .userName("testuser")
+    .build();
 Packet response = client.send(request);
 
 // Close connection
 client.close().get();
 ```
 
-### Asynchronous Operations
+## Asynchronous Operations
 
-All TCP-based clients support asynchronous operations:
+All TCP-based clients support asynchronous operations using `CompletableFuture`:
 
 ```java
 import java.util.concurrent.CompletableFuture;
@@ -142,45 +154,9 @@ client.close().get();
 executor.shutdown();
 ```
 
-## Architecture
+## Connection Management
 
-### Client Hierarchy
-
-```
-RadiusClient (interface)
-├── UdpRadiusClient
-└── BaseTcpRadiusClient (abstract)
-    ├── TcpRadiusClient
-    └── RadSecRadiusClient
-```
-
-### Key Interfaces
-
-- **`RadiusClient`**: Basic synchronous RADIUS client interface
-- **`AsyncRadiusClient`**: Asynchronous RADIUS client interface
-- **`ConnectionManager`**: Connection lifecycle management interface
-
-## Transport Protocols
-
-### UDP (Port 1812/1813)
-- **Use Case**: Simple authentication, legacy systems
-- **Features**: Stateless, retransmission strategy
-- **Pros**: Simple, widely supported
-- **Cons**: No connection management, unreliable
-
-### TCP (Port 2083/2084)
-- **Use Case**: High-performance applications, reliable connections
-- **Features**: Persistent connections, keep-alive, auto-reconnect
-- **Pros**: Reliable, connection management, async support
-- **Cons**: More complex, requires connection management
-
-### RadSec (Port 2083/2084)
-- **Use Case**: Secure RADIUS communication, enterprise environments
-- **Features**: TLS encryption, all TCP features
-- **Pros**: Secure, reliable, enterprise-ready
-- **Cons**: Most complex, requires TLS configuration
-
-## Configuration
+TCP-based clients provide comprehensive connection management:
 
 ### Connection Configuration
 
@@ -194,7 +170,34 @@ TcpRadiusClient.ConnectionConfig config = TcpRadiusClient.ConnectionConfig.newBu
     .build();
 ```
 
-### TLS Configuration (RadSec)
+### Manual Connection Control
+
+```java
+TcpRadiusClient client = TcpRadiusClient.newBuilder()
+    .address(new InetSocketAddress("radius.example.com", 2083))
+    .secret("shared-secret".getBytes())
+    .build();
+
+// Connect manually
+client.connect().get();
+
+// Check connection status
+if (client.isConnected()) {
+    // Send requests
+}
+
+// Reconnect if needed
+if (!client.isConnected()) {
+    client.reconnect().get();
+}
+
+// Disconnect manually
+client.disconnect().get();
+```
+
+## TLS Configuration (RadSec)
+
+RadSec clients support custom TLS configuration:
 
 ```java
 import javax.net.ssl.SSLContext;
@@ -209,39 +212,6 @@ RadSecRadiusClient client = RadSecRadiusClient.newBuilder()
     .sslContext(sslContext)
     .enabledProtocols("TLSv1.2", "TLSv1.3")
     .enabledCipherSuites("TLS_AES_128_GCM_SHA256", "TLS_AES_256_GCM_SHA384")
-    .build();
-```
-
-### Retransmission Strategy
-
-All clients support configurable retransmission strategies for handling network failures:
-
-```java
-import org.aaa4j.radius.client.IntervalRetransmissionStrategy;
-import org.aaa4j.radius.client.RetransmissionStrategy;
-import java.time.Duration;
-
-// Default strategy: 3 attempts with 5-second intervals
-RetransmissionStrategy defaultStrategy = new IntervalRetransmissionStrategy(3, Duration.ofSeconds(5));
-
-// Custom strategy: 5 attempts with exponential backoff
-RetransmissionStrategy customStrategy = new RetransmissionStrategy() {
-    @Override
-    public int getMaxAttempts() {
-        return 5;
-    }
-    
-    @Override
-    public Duration timeoutForAttempt(int attempt) {
-        return Duration.ofSeconds((long) Math.pow(2, attempt)); // 1s, 2s, 4s, 8s, 16s
-    }
-};
-
-// Use with any client
-TcpRadiusClient client = TcpRadiusClient.newBuilder()
-    .address(new InetSocketAddress("radius.example.com", 2083))
-    .secret("shared-secret".getBytes())
-    .retransmissionStrategy(customStrategy)
     .build();
 ```
 
@@ -269,7 +239,6 @@ try {
 3. **Error Handling**: Implement proper error handling and retry logic
 4. **TLS Security**: Use proper certificate validation in production RadSec deployments
 5. **Async Operations**: Use async operations for better performance in multi-threaded applications
-6. **Thread Safety**: TCP/RadSec clients are thread-safe for concurrent requests
 
 ## Port Numbers
 
@@ -277,29 +246,8 @@ try {
 - **TCP RADIUS**: 2083 (authentication), 2084 (accounting)
 - **RadSec**: 2083 (authentication), 2084 (accounting)
 
-## Building
+## Thread Safety
 
-```bash
-mvn clean install
-```
-
-## Testing
-
-```bash
-mvn test
-```
-
-## Examples
-
-See the `examples` package for complete usage examples:
-
-- `ClientExamples.java`: Comprehensive examples for all client types
-- Various integration examples demonstrating real-world usage
-
-## License
-
-Apache License 2.0 - see LICENSE.txt for details.
-
-## Contributing
-
-Contributions are welcome! Please see the contributing guidelines for more information.
+- **UDP Client**: Thread-safe for concurrent requests
+- **TCP/RadSec Clients**: Thread-safe for concurrent requests when using async operations
+- **Connection Management**: Thread-safe for connection operations 

@@ -93,6 +93,10 @@ public class UdpRadiusClient implements RadiusClient {
 
     @Override
     public Packet send(Packet requestPacket) throws RadiusClientException {
+        // Calculate total timeout based on retransmission strategy
+        Duration totalTimeout = calculateTotalTimeout();
+        long startTime = System.currentTimeMillis();
+        
         DatagramSocket datagramSocket = null;
 
         try {
@@ -111,6 +115,12 @@ public class UdpRadiusClient implements RadiusClient {
             DatagramPacket inDatagramPacket = null;
 
             for (int attempt = 0; attempt < maxAttempts; attempt++) {
+                // Check if we've exceeded the total timeout
+                long elapsedTime = System.currentTimeMillis() - startTime;
+                if (elapsedTime >= totalTimeout.toMillis()) {
+                    throw new RadiusClientException("Request timed out after " + Duration.ofMillis(elapsedTime));
+                }
+                
                 Duration timeoutDuration = retransmissionStrategy.timeoutForAttempt(attempt);
                 datagramSocket.setSoTimeout(Math.toIntExact(timeoutDuration.toMillis()));
 
@@ -141,6 +151,27 @@ public class UdpRadiusClient implements RadiusClient {
                 datagramSocket.close();
             }
         }
+    }
+
+    /**
+     * Calculates the total timeout for a request based on the retransmission strategy.
+     * This includes all attempt timeouts plus additional buffer for processing overhead.
+     *
+     * @return the total timeout duration
+     */
+    private Duration calculateTotalTimeout() {
+        int maxAttempts = retransmissionStrategy.getMaxAttempts();
+        Duration totalTimeout = Duration.ZERO;
+        
+        // Sum up all attempt timeouts
+        for (int attempt = 0; attempt < maxAttempts; attempt++) {
+            totalTimeout = totalTimeout.plus(retransmissionStrategy.timeoutForAttempt(attempt));
+        }
+        
+        // Add buffer for processing overhead
+        Duration overhead = Duration.ofSeconds(2);
+        
+        return totalTimeout.plus(overhead);
     }
 
     /**

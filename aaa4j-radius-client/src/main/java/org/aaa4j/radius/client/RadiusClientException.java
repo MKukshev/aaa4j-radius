@@ -29,7 +29,14 @@ public class RadiusClientException extends Exception {
         super(cause);
     }
 
-    RadiusClientException(String message, Throwable cause) {
+    /**
+     * Creates a new RadiusClientException with the specified message and cause.
+     * This constructor is used for wrapping other exceptions with additional context.
+     *
+     * @param message the detail message
+     * @param cause the cause of the exception
+     */
+    public RadiusClientException(String message, Throwable cause) {
         super(message, cause);
     }
 

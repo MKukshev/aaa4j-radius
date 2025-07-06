@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/aaa4j-radius-client/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/aaa4j-radius-client/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/aaa4j-radius-core/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/aaa4j-radius-core/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/aaa4j-radius-dictionary-freeradius/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/aaa4j-radius-dictionary-freeradius/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/aaa4j-radius-server/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/aaa4j-radius-server/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/resources" charset="UTF-8" />
+  </component>
+</project>
