@@ -54,6 +54,7 @@ public class RadiusTransportFactory {
             case NETTY:
                 return new NettyRadiusTransport.Builder()
                         .config(config)
+                        .secret(secret)
                         .build();
             default:
                 throw new IllegalArgumentException("Unsupported transport type: " + type);
