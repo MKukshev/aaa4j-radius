@@ -141,12 +141,9 @@ public class NettyRadiusTransport implements RadiusTransport {
                     }
                 });
             } else {
-                // UDP: отправляем напрямую
+                // UDP: отправляем напрямую через подключенный канал
                 ByteBuf buffer = Unpooled.wrappedBuffer(packetData);
-                InetSocketAddress serverAddress = new InetSocketAddress(
-                    config.getServerAddress(), config.getServerPort());
-                DatagramPacket datagramPacket = new DatagramPacket(buffer, serverAddress);
-                channel.writeAndFlush(datagramPacket).addListener(future -> {
+                channel.writeAndFlush(buffer).addListener(future -> {
                     if (!future.isSuccess()) {
                         pendingRequests.remove(realPacketId);
                         responseFuture.completeExceptionally(future.cause());
@@ -250,6 +247,9 @@ public class NettyRadiusTransport implements RadiusTransport {
                 .option(ChannelOption.SO_BROADCAST, false)
                 .option(ChannelOption.SO_RCVBUF, 65536)
                 .option(ChannelOption.SO_SNDBUF, 65536)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 
+                    (int) (config.getConnectionTimeout() != null ? 
+                        config.getConnectionTimeout().toMillis() : 30000))
                 .handler(new ChannelInitializer<Channel>() {
                     @Override
                     protected void initChannel(Channel ch) throws Exception {
@@ -258,15 +258,17 @@ public class NettyRadiusTransport implements RadiusTransport {
                     }
                 });
 
-        // Для UDP создаем канал без подключения - просто биндим на случайный порт
-        ChannelFuture bindFuture = bootstrap.bind(0);
-        bindFuture.addListener(future -> {
+        // Для UDP подключаемся к серверу согласно конфигурации
+        InetSocketAddress serverAddress = new InetSocketAddress(
+            config.getServerAddress(), config.getServerPort());
+        ChannelFuture connectFuture = bootstrap.connect(serverAddress);
+        connectFuture.addListener(future -> {
             if (future.isSuccess()) {
-                channel = bindFuture.channel();
+                channel = connectFuture.channel();
                 connected = true;
-                connectFuture.complete(null);
+                NettyRadiusTransport.this.connectFuture.complete(null);
             } else {
-                connectFuture.completeExceptionally(future.cause());
+                NettyRadiusTransport.this.connectFuture.completeExceptionally(future.cause());
             }
         });
     }
