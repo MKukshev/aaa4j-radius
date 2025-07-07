@@ -16,29 +16,39 @@
 
 package org.aaa4j.radius.client.transport;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.*;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.DatagramPacket;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioDatagramChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.util.concurrent.DefaultThreadFactory;
-import org.aaa4j.radius.core.packet.Packet;
-import org.aaa4j.radius.core.packet.PacketCodec;
-import org.aaa4j.radius.core.dictionary.dictionaries.StandardDictionary;
-
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.aaa4j.radius.core.dictionary.dictionaries.StandardDictionary;
+import org.aaa4j.radius.core.packet.Packet;
+import org.aaa4j.radius.core.packet.PacketCodec;
+
+import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.DatagramPacket;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.util.concurrent.DefaultThreadFactory;
 
 /**
  * Netty-based транспорт для RADIUS клиентов.
@@ -76,6 +86,7 @@ public class NettyRadiusTransport implements RadiusTransport {
     
     // Обработка ответов
     private final ConcurrentHashMap<Byte, CompletableFuture<Packet>> pendingRequests = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Byte, byte[]> requestAuthenticators = new ConcurrentHashMap<>();
     private final AtomicInteger requestTimeout = new AtomicInteger(30); // секунды
 
     private NettyRadiusTransport(Builder builder) {
@@ -108,9 +119,15 @@ public class NettyRadiusTransport implements RadiusTransport {
             
             // Кодируем пакет
             byte[] packetData = packetCodec.encodeRequest(requestPacket, secret, authenticatorBytes);
+
+            // Получаем реальный ID пакета из packetData
+            byte realPacketId = packetData[1];
+
+
             
-            // Сохраняем pending request
-            pendingRequests.put(packetId, responseFuture);
+            // Сохраняем pending request и authenticator по реальному ID
+            pendingRequests.put(realPacketId, responseFuture);
+            requestAuthenticators.put(realPacketId, authenticatorBytes);
             
             if (isTcp) {
                 // TCP/RadSec: отправляем с length prefix (4 байта big-endian)
@@ -119,7 +136,7 @@ public class NettyRadiusTransport implements RadiusTransport {
                 buffer.writeBytes(packetData);
                 channel.writeAndFlush(buffer).addListener(future -> {
                     if (!future.isSuccess()) {
-                        pendingRequests.remove(packetId);
+                        pendingRequests.remove(realPacketId);
                         responseFuture.completeExceptionally(future.cause());
                     }
                 });
@@ -131,7 +148,7 @@ public class NettyRadiusTransport implements RadiusTransport {
                 DatagramPacket datagramPacket = new DatagramPacket(buffer, serverAddress);
                 channel.writeAndFlush(datagramPacket).addListener(future -> {
                     if (!future.isSuccess()) {
-                        pendingRequests.remove(packetId);
+                        pendingRequests.remove(realPacketId);
                         responseFuture.completeExceptionally(future.cause());
                     }
                 });
@@ -140,7 +157,7 @@ public class NettyRadiusTransport implements RadiusTransport {
             // Устанавливаем таймаут
             Duration timeout = config.getReadTimeout() != null ? config.getReadTimeout() : Duration.ofSeconds(30);
             eventLoopGroup.schedule(() -> {
-                CompletableFuture<Packet> pending = pendingRequests.remove(packetId);
+                CompletableFuture<Packet> pending = pendingRequests.remove(realPacketId);
                 if (pending != null && !pending.isDone()) {
                     pending.completeExceptionally(
                         new RuntimeException("Response timeout after " + timeout));
@@ -202,11 +219,13 @@ public class NettyRadiusTransport implements RadiusTransport {
                         if (isRadSec) {
                             SslContext sslContext = SslContextBuilder.forClient()
                                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                                    .protocols("TLSv1.2", "TLSv1.3")
                                     .build();
                             pipeline.addLast(sslContext.newHandler(ch.alloc()));
                         }
                         
-                        // Добавляем обработчики
+                        // Добавляем обработчики для TCP length prefix (4 байта big-endian)
+                        pipeline.addLast(new LengthFieldBasedFrameDecoder(65536, 0, 4, 0, 4));
                         pipeline.addLast(new RadiusTcpPacketHandler(packetCodec, secret, pendingRequests));
                     }
                 });
@@ -239,7 +258,7 @@ public class NettyRadiusTransport implements RadiusTransport {
                     }
                 });
 
-        // Для UDP создаем канал без подключения
+        // Для UDP создаем канал без подключения - просто биндим на случайный порт
         ChannelFuture bindFuture = bootstrap.bind(0);
         bindFuture.addListener(future -> {
             if (future.isSuccess()) {
@@ -259,10 +278,11 @@ public class NettyRadiusTransport implements RadiusTransport {
             return closeFuture;
         }
 
-        // Очищаем pending requests
+        // Очищаем pending requests и authenticators
         pendingRequests.values().forEach(future -> 
             future.completeExceptionally(new RuntimeException("Transport closed")));
         pendingRequests.clear();
+        requestAuthenticators.clear();
 
         if (channel != null) {
             channel.close().addListener(future -> {
@@ -291,7 +311,7 @@ public class NettyRadiusTransport implements RadiusTransport {
     /**
      * Обработчик RADIUS пакетов для TCP/RadSec.
      */
-    private static class RadiusTcpPacketHandler extends ChannelInboundHandlerAdapter {
+    private class RadiusTcpPacketHandler extends ChannelInboundHandlerAdapter {
         private final PacketCodec packetCodec;
         private final byte[] secret;
         private final ConcurrentHashMap<Byte, CompletableFuture<Packet>> pendingRequests;
@@ -311,15 +331,15 @@ public class NettyRadiusTransport implements RadiusTransport {
                 buffer.readBytes(data);
                 
                 try {
-                    // Для decodeResponse нужен authenticator из запроса
-                    // Пока используем нулевой authenticator для простоты
-                    byte[] authenticatorBytes = new byte[16];
-                    Packet response = packetCodec.decodeResponse(data, secret, authenticatorBytes);
-                    
-                    // Находим соответствующий pending request
-                    byte responseId = (byte) (response.getReceivedFields().getIdentifier() & 0xFF);
+                    // Находим соответствующий pending request по ID пакета
+                    // Извлекаем ID из первых байтов пакета (байт 1)
+                    byte responseId = data[1];
                     CompletableFuture<Packet> pending = pendingRequests.remove(responseId);
+                    byte[] authenticator = requestAuthenticators.remove(responseId);
+                    
                     if (pending != null && !pending.isDone()) {
+                        // Декодируем с правильным authenticator
+                        Packet response = packetCodec.decodeResponse(data, secret, authenticator);
                         pending.complete(response);
                     }
                 } catch (Exception e) {
@@ -338,7 +358,7 @@ public class NettyRadiusTransport implements RadiusTransport {
     /**
      * Обработчик RADIUS пакетов для UDP.
      */
-    private static class RadiusUdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket> {
+    private class RadiusUdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket> {
         private final PacketCodec packetCodec;
         private final byte[] secret;
         private final ConcurrentHashMap<Byte, CompletableFuture<Packet>> pendingRequests;
@@ -357,15 +377,16 @@ public class NettyRadiusTransport implements RadiusTransport {
             buffer.readBytes(data);
             
             try {
-                // Для decodeResponse нужен authenticator из запроса
-                // Пока используем нулевой authenticator для простоты
-                byte[] authenticatorBytes = new byte[16];
-                Packet response = packetCodec.decodeResponse(data, secret, authenticatorBytes);
+                // Находим соответствующий pending request по ID пакета
+                // Извлекаем ID из первых байтов пакета (байт 1)
+                byte responseId = data[1];
                 
-                // Находим соответствующий pending request
-                byte responseId = (byte) (response.getReceivedFields().getIdentifier() & 0xFF);
                 CompletableFuture<Packet> pending = pendingRequests.remove(responseId);
+                byte[] authenticator = requestAuthenticators.remove(responseId);
+                
                 if (pending != null && !pending.isDone()) {
+                    // Декодируем с правильным authenticator
+                    Packet response = packetCodec.decodeResponse(data, secret, authenticator);
                     pending.complete(response);
                 }
             } catch (Exception e) {

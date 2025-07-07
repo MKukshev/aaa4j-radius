@@ -52,9 +52,24 @@ public class RadiusTransportFactory {
                         .radSec(true)
                         .build();
             case NETTY:
+                // Для NETTY по умолчанию используем UDP
                 return new NettyRadiusTransport.Builder()
                         .config(config)
                         .secret(secret)
+                        .tcp(false) // UDP по умолчанию
+                        .build();
+            case NETTY_TCP:
+                return new NettyRadiusTransport.Builder()
+                        .config(config)
+                        .secret(secret)
+                        .tcp(true)
+                        .build();
+            case NETTY_RADSEC:
+                return new NettyRadiusTransport.Builder()
+                        .config(config)
+                        .secret(secret)
+                        .tcp(true)
+                        .radSec(true)
                         .build();
             default:
                 throw new IllegalArgumentException("Unsupported transport type: " + type);

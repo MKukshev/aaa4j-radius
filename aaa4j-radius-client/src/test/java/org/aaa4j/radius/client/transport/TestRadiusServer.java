@@ -170,6 +170,7 @@ public class TestRadiusServer {
                         System.arraycopy(packet.getData(), packet.getOffset(), data, 0, packet.getLength());
                         
                         Packet request = packetCodec.decodeRequest(data, secret.getBytes());
+                        
                         Packet response = handler.apply(request);
                         
                         // Кодируем ответ
