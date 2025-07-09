@@ -16,16 +16,12 @@
 
 package org.aaa4j.radius.client;
 
-import java.io.Closeable;
-import java.io.IOException;
-
 import org.aaa4j.radius.core.packet.Packet;
 
 /**
  * A RADIUS client sends RADIUS request packets and receives RADIUS response packets.
- * All RADIUS clients implement Closeable to ensure proper resource cleanup.
  */
-public interface RadiusClient extends Closeable {
+public interface RadiusClient {
 
     /**
      * Sends a RADIUS request packet.
@@ -36,12 +32,4 @@ public interface RadiusClient extends Closeable {
      */
     Packet send(Packet requestPacket) throws RadiusClientException;
 
-    /**
-     * Closes the client and releases any resources.
-     * This method should be called when the client is no longer needed.
-     *
-     * @throws IOException if an I/O error occurs during closing
-     */
-    @Override
-    void close() throws IOException;
 }

@@ -58,14 +58,10 @@ public class UniversalRadiusClientTransportTest {
                 .secret(SECRET.getBytes())
                 .build();
 
-        try {
-            Packet response = client.send(new org.aaa4j.radius.core.packet.packets.AccessRequest());
-            assertEquals(AccessAccept.CODE, response.getCode());
-            assertEquals(1, testServer.getAcceptCount());
-            assertEquals(0, testServer.getRejectCount());
-        } finally {
-            client.close();
-        }
+        Packet response = client.send(new org.aaa4j.radius.core.packet.packets.AccessRequest());
+        assertEquals(AccessAccept.CODE, response.getCode());
+        assertEquals(1, testServer.getAcceptCount());
+        assertEquals(0, testServer.getRejectCount());
     }
 
     @Test
@@ -85,14 +81,10 @@ public class UniversalRadiusClientTransportTest {
                 .secret(SECRET.getBytes())
                 .build();
 
-        try {
-            Packet response = client.send(new org.aaa4j.radius.core.packet.packets.AccessRequest());
-            assertEquals(AccessReject.CODE, response.getCode());
-            assertEquals(0, testServer.getAcceptCount());
-            assertEquals(1, testServer.getRejectCount());
-        } finally {
-            client.close();
-        }
+        Packet response = client.send(new org.aaa4j.radius.core.packet.packets.AccessRequest());
+        assertEquals(AccessReject.CODE, response.getCode());
+        assertEquals(0, testServer.getAcceptCount());
+        assertEquals(1, testServer.getRejectCount());
     }
 
     @Test
@@ -112,14 +104,10 @@ public class UniversalRadiusClientTransportTest {
                 .secret(SECRET.getBytes())
                 .build();
 
-        try {
-            Packet response = client.send(new org.aaa4j.radius.core.packet.packets.AccessRequest());
-            assertEquals(AccessAccept.CODE, response.getCode());
-            assertEquals(1, testServer.getAcceptCount());
-            assertEquals(0, testServer.getRejectCount());
-        } finally {
-            client.close();
-        }
+        Packet response = client.send(new org.aaa4j.radius.core.packet.packets.AccessRequest());
+        assertEquals(AccessAccept.CODE, response.getCode());
+        assertEquals(1, testServer.getAcceptCount());
+        assertEquals(0, testServer.getRejectCount());
     }
 
     @Test
@@ -139,14 +127,10 @@ public class UniversalRadiusClientTransportTest {
                 .secret(SECRET.getBytes())
                 .build();
 
-        try {
-            Packet response = client.send(new org.aaa4j.radius.core.packet.packets.AccessRequest());
-            assertEquals(AccessReject.CODE, response.getCode());
-            assertEquals(0, testServer.getAcceptCount());
-            assertEquals(1, testServer.getRejectCount());
-        } finally {
-            client.close();
-        }
+        Packet response = client.send(new org.aaa4j.radius.core.packet.packets.AccessRequest());
+        assertEquals(AccessReject.CODE, response.getCode());
+        assertEquals(0, testServer.getAcceptCount());
+        assertEquals(1, testServer.getRejectCount());
     }
 
     @Test
@@ -166,28 +150,24 @@ public class UniversalRadiusClientTransportTest {
                 .secret(SECRET.getBytes())
                 .build();
 
+        // RadSec тест может падать из-за SSL handshake без правильных сертификатов
+        // Это ожидаемо в тестовой среде
         try {
-            // RadSec тест может падать из-за SSL handshake без правильных сертификатов
-            // Это ожидаемо в тестовой среде
-            try {
-                Packet response = client.send(new org.aaa4j.radius.core.packet.packets.AccessRequest());
-                assertEquals(AccessAccept.CODE, response.getCode());
-                assertEquals(1, testServer.getAcceptCount());
-                assertEquals(0, testServer.getRejectCount());
-            } catch (Exception e) {
-                // Ожидаем SSL handshake exception в тестовой среде без сертификатов
-                assertTrue(e.getMessage().contains("handshake_failure") || 
-                          e.getMessage().contains("SSLHandshakeException") ||
-                          e.getMessage().contains("RadiusClientException"));
-            }
-        } finally {
-            client.close();
+            Packet response = client.send(new org.aaa4j.radius.core.packet.packets.AccessRequest());
+            assertEquals(AccessAccept.CODE, response.getCode());
+            assertEquals(1, testServer.getAcceptCount());
+            assertEquals(0, testServer.getRejectCount());
+        } catch (Exception e) {
+            // Ожидаем SSL handshake exception в тестовой среде без сертификатов
+            assertTrue(e.getMessage().contains("handshake_failure") || 
+                      e.getMessage().contains("SSLHandshakeException") ||
+                      e.getMessage().contains("RadiusClientException"));
         }
     }
 
     // Простые тесты для проверки создания клиентов
     @Test
-    public void testCreateUdpClient() throws Exception {
+    public void testCreateUdpClient() {
         BaseTransportConfig config = new BaseTransportConfig.Builder()
                 .serverAddress("localhost")
                 .serverPort(1812)
@@ -200,16 +180,12 @@ public class UniversalRadiusClientTransportTest {
                 .secret("test-secret".getBytes())
                 .build();
 
-        try {
-            assertNotNull(client);
-            assertNotNull(client.getTransport());
-        } finally {
-            client.close();
-        }
+        assertNotNull(client);
+        assertNotNull(client.getTransport());
     }
 
     @Test
-    public void testCreateTcpClient() throws Exception {
+    public void testCreateTcpClient() {
         BaseTransportConfig config = new BaseTransportConfig.Builder()
                 .serverAddress("localhost")
                 .serverPort(1812)
@@ -225,16 +201,12 @@ public class UniversalRadiusClientTransportTest {
                 .secret("test-secret".getBytes())
                 .build();
 
-        try {
-            assertNotNull(client);
-            assertNotNull(client.getTransport());
-        } finally {
-            client.close();
-        }
+        assertNotNull(client);
+        assertNotNull(client.getTransport());
     }
 
     @Test
-    public void testCreateRadSecClient() throws Exception {
+    public void testCreateRadSecClient() {
         BaseTransportConfig config = new BaseTransportConfig.Builder()
                 .serverAddress("localhost")
                 .serverPort(2083)
@@ -250,17 +222,13 @@ public class UniversalRadiusClientTransportTest {
                 .secret("test-secret".getBytes())
                 .build();
 
-        try {
-            assertNotNull(client);
-            assertNotNull(client.getTransport());
-        } finally {
-            client.close();
-        }
+        assertNotNull(client);
+        assertNotNull(client.getTransport());
     }
 
     // Тесты для Netty транспортов
     @Test
-    public void testCreateNettyUdpClient() throws Exception {
+    public void testCreateNettyUdpClient() {
         BaseTransportConfig config = new BaseTransportConfig.Builder()
                 .serverAddress("localhost")
                 .serverPort(1812)
@@ -274,22 +242,18 @@ public class UniversalRadiusClientTransportTest {
                 .secret("test-secret".getBytes())
                 .build();
 
-        try {
-            assertNotNull(client);
-            assertNotNull(client.getTransport());
+        assertNotNull(client);
+        assertNotNull(client.getTransport());
 
-            // Netty транспорт теперь полностью реализован - проверяем подключение
-            try {
-                client.connect().get();
-                assertTrue(client.isConnected());
-            } catch (Exception e) {
-                // В тестовой среде подключение может не удаться, но это нормально
-                // Главное, что транспорт создается и не выбрасывает исключение
-                assertTrue(e.getMessage().contains("Connection refused") || 
-                          e.getMessage().contains("connect"));
-            }
-        } finally {
-            client.close();
+        // Netty транспорт теперь полностью реализован - проверяем подключение
+        try {
+            client.connect().get();
+            assertTrue(client.isConnected());
+        } catch (Exception e) {
+            // В тестовой среде подключение может не удаться, но это нормально
+            // Главное, что транспорт создается и не выбрасывает исключение
+            assertTrue(e.getMessage().contains("Connection refused") || 
+                      e.getMessage().contains("connect"));
         }
     }
 
@@ -324,7 +288,7 @@ public class UniversalRadiusClientTransportTest {
     }
 
     @Test
-    public void testCreateNettyTcpClient() throws Exception {
+    public void testCreateNettyTcpClient() {
         BaseTransportConfig config = new BaseTransportConfig.Builder()
                 .serverAddress("localhost")
                 .serverPort(2083)
@@ -341,22 +305,18 @@ public class UniversalRadiusClientTransportTest {
                 .secret("test-secret".getBytes())
                 .build();
 
-        try {
-            assertNotNull(client);
-            assertNotNull(client.getTransport());
+        assertNotNull(client);
+        assertNotNull(client.getTransport());
 
-            // Netty транспорт теперь полностью реализован - проверяем подключение
-            try {
-                client.connect().get();
-                assertTrue(client.isConnected());
-            } catch (Exception e) {
-                // В тестовой среде подключение может не удаться, но это нормально
-                // Главное, что транспорт создается и не выбрасывает исключение
-                assertTrue(e.getMessage().contains("Connection refused") || 
-                          e.getMessage().contains("connect"));
-            }
-        } finally {
-            client.close();
+        // Netty транспорт теперь полностью реализован - проверяем подключение
+        try {
+            client.connect().get();
+            assertTrue(client.isConnected());
+        } catch (Exception e) {
+            // В тестовой среде подключение может не удаться, но это нормально
+            // Главное, что транспорт создается и не выбрасывает исключение
+            assertTrue(e.getMessage().contains("Connection refused") || 
+                      e.getMessage().contains("connect"));
         }
     }
 
@@ -391,7 +351,7 @@ public class UniversalRadiusClientTransportTest {
     }
 
     @Test
-    public void testCreateNettyRadSecClient() throws Exception {
+    public void testCreateNettyRadSecClient() {
         BaseTransportConfig config = new BaseTransportConfig.Builder()
                 .serverAddress("localhost")
                 .serverPort(2083)
@@ -408,22 +368,18 @@ public class UniversalRadiusClientTransportTest {
                 .secret("test-secret".getBytes())
                 .build();
 
-        try {
-            assertNotNull(client);
-            assertNotNull(client.getTransport());
+        assertNotNull(client);
+        assertNotNull(client.getTransport());
 
-            // Netty транспорт теперь полностью реализован - проверяем подключение
-            try {
-                client.connect().get();
-                assertTrue(client.isConnected());
-            } catch (Exception e) {
-                // В тестовой среде подключение может не удаться, но это нормально
-                // Главное, что транспорт создается и не выбрасывает исключение
-                assertTrue(e.getMessage().contains("Connection refused") || 
-                          e.getMessage().contains("connect"));
-            }
-        } finally {
-            client.close();
+        // Netty транспорт теперь полностью реализован - проверяем подключение
+        try {
+            client.connect().get();
+            assertTrue(client.isConnected());
+        } catch (Exception e) {
+            // В тестовой среде подключение может не удаться, но это нормально
+            // Главное, что транспорт создается и не выбрасывает исключение
+            assertTrue(e.getMessage().contains("Connection refused") || 
+                      e.getMessage().contains("connect"));
         }
     }
 
@@ -468,7 +424,7 @@ public class UniversalRadiusClientTransportTest {
 
     // Сравнительные тесты Socket vs Netty
     @Test
-    public void testSocketVsNettyUdpClient() throws Exception {
+    public void testSocketVsNettyUdpClient() {
         BaseTransportConfig config = new BaseTransportConfig.Builder()
                 .serverAddress("localhost")
                 .serverPort(1812)
@@ -482,6 +438,9 @@ public class UniversalRadiusClientTransportTest {
                 .secret("test-secret".getBytes())
                 .build();
 
+        assertNotNull(socketClient);
+        assertNotNull(socketClient.getTransport());
+
         // Netty UDP - создается успешно, но методы выбрасывают исключение
         UniversalRadiusClient nettyClient = UniversalRadiusClient.newBuilder()
                 .transportType(TransportType.NETTY)
@@ -489,31 +448,23 @@ public class UniversalRadiusClientTransportTest {
                 .secret("test-secret".getBytes())
                 .build();
 
+        assertNotNull(nettyClient);
+        assertNotNull(nettyClient.getTransport());
+
+        // Netty транспорт теперь полностью реализован - проверяем подключение
         try {
-            assertNotNull(socketClient);
-            assertNotNull(socketClient.getTransport());
-
-            assertNotNull(nettyClient);
-            assertNotNull(nettyClient.getTransport());
-
-            // Netty транспорт теперь полностью реализован - проверяем подключение
-            try {
-                nettyClient.connect().get();
-                assertTrue(nettyClient.isConnected());
-            } catch (Exception e) {
-                // В тестовой среде подключение может не удаться, но это нормально
-                // Главное, что транспорт создается и не выбрасывает исключение
-                assertTrue(e.getMessage().contains("Connection refused") || 
-                          e.getMessage().contains("connect"));
-            }
-        } finally {
-            socketClient.close();
-            nettyClient.close();
+            nettyClient.connect().get();
+            assertTrue(nettyClient.isConnected());
+        } catch (Exception e) {
+            // В тестовой среде подключение может не удаться, но это нормально
+            // Главное, что транспорт создается и не выбрасывает исключение
+            assertTrue(e.getMessage().contains("Connection refused") || 
+                      e.getMessage().contains("connect"));
         }
     }
 
     @Test
-    public void testSocketVsNettyTcpClient() throws Exception {
+    public void testSocketVsNettyTcpClient() {
         BaseTransportConfig config = new BaseTransportConfig.Builder()
                 .serverAddress("localhost")
                 .serverPort(2083)
@@ -530,6 +481,9 @@ public class UniversalRadiusClientTransportTest {
                 .secret("test-secret".getBytes())
                 .build();
 
+        assertNotNull(socketClient);
+        assertNotNull(socketClient.getTransport());
+
         // Netty TCP - создается успешно, но методы выбрасывают исключение
         UniversalRadiusClient nettyClient = UniversalRadiusClient.newBuilder()
                 .transportType(TransportType.NETTY)
@@ -537,26 +491,18 @@ public class UniversalRadiusClientTransportTest {
                 .secret("test-secret".getBytes())
                 .build();
 
+        assertNotNull(nettyClient);
+        assertNotNull(nettyClient.getTransport());
+
+        // Netty транспорт теперь полностью реализован - проверяем подключение
         try {
-            assertNotNull(socketClient);
-            assertNotNull(socketClient.getTransport());
-
-            assertNotNull(nettyClient);
-            assertNotNull(nettyClient.getTransport());
-
-            // Netty транспорт теперь полностью реализован - проверяем подключение
-            try {
-                nettyClient.connect().get();
-                assertTrue(nettyClient.isConnected());
-            } catch (Exception e) {
-                // В тестовой среде подключение может не удаться, но это нормально
-                // Главное, что транспорт создается и не выбрасывает исключение
-                assertTrue(e.getMessage().contains("Connection refused") || 
-                          e.getMessage().contains("connect"));
-            }
-        } finally {
-            socketClient.close();
-            nettyClient.close();
+            nettyClient.connect().get();
+            assertTrue(nettyClient.isConnected());
+        } catch (Exception e) {
+            // В тестовой среде подключение может не удаться, но это нормально
+            // Главное, что транспорт создается и не выбрасывает исключение
+            assertTrue(e.getMessage().contains("Connection refused") || 
+                      e.getMessage().contains("connect"));
         }
     }
 } 

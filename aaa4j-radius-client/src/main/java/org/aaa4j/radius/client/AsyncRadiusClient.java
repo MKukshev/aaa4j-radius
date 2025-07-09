@@ -16,18 +16,15 @@
 
 package org.aaa4j.radius.client;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.concurrent.CompletableFuture;
-
 import org.aaa4j.radius.core.packet.Packet;
+
+import java.util.concurrent.CompletableFuture;
 
 /**
  * An asynchronous RADIUS client that sends RADIUS request packets and receives RADIUS response packets
  * asynchronously using CompletableFuture.
- * All async RADIUS clients implement Closeable to ensure proper resource cleanup.
  */
-public interface AsyncRadiusClient extends Closeable {
+public interface AsyncRadiusClient {
 
     /**
      * Sends a RADIUS request packet asynchronously.
@@ -39,29 +36,11 @@ public interface AsyncRadiusClient extends Closeable {
     CompletableFuture<Packet> sendAsync(Packet requestPacket);
 
     /**
-     * Closes the client and releases any resources asynchronously.
+     * Closes the client and releases any resources.
      * 
      * @return a CompletableFuture that completes when the client is closed
      */
-    CompletableFuture<Void> closeAsync();
-
-    /**
-     * Closes the client and releases any resources.
-     * This method blocks until the client is fully closed.
-     *
-     * @throws IOException if an I/O error occurs during closing
-     */
-    @Override
-    default void close() throws IOException {
-        try {
-            closeAsync().get();
-        } catch (Exception e) {
-            if (e instanceof IOException) {
-                throw (IOException) e;
-            }
-            throw new IOException("Failed to close async client", e);
-        }
-    }
+    CompletableFuture<Void> close();
 
     /**
      * Checks if the client is connected.
