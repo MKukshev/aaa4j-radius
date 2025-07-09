@@ -16,6 +16,9 @@
 
 package org.aaa4j.radius.client.clients;
 
+import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
+
 import org.aaa4j.radius.client.AsyncRadiusClient;
 import org.aaa4j.radius.client.RadiusClient;
 import org.aaa4j.radius.client.RadiusClientException;
@@ -24,8 +27,6 @@ import org.aaa4j.radius.client.transport.RadiusTransportFactory;
 import org.aaa4j.radius.client.transport.TransportConfig;
 import org.aaa4j.radius.client.transport.TransportType;
 import org.aaa4j.radius.core.packet.Packet;
-
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Универсальный RADIUS клиент, поддерживающий различные типы транспорта.
@@ -86,12 +87,29 @@ public class UniversalRadiusClient implements RadiusClient, AsyncRadiusClient {
     }
 
     /**
-     * Закрывает соединение и освобождает ресурсы.
+     * Закрывает соединение и освобождает ресурсы асинхронно.
      *
      * @return CompletableFuture, который завершается при закрытии
      */
-    public CompletableFuture<Void> close() {
+    public CompletableFuture<Void> closeAsync() {
         return transport.close();
+    }
+
+    /**
+     * Закрывает соединение и освобождает ресурсы.
+     *
+     * @throws IOException если произошла ошибка при закрытии
+     */
+    @Override
+    public void close() throws IOException {
+        try {
+            closeAsync().get();
+        } catch (Exception e) {
+            if (e instanceof IOException) {
+                throw (IOException) e;
+            }
+            throw new IOException("Failed to close universal client", e);
+        }
     }
 
     /**

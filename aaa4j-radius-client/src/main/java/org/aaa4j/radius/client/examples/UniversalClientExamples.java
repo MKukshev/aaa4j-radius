@@ -16,14 +16,14 @@
 
 package org.aaa4j.radius.client.examples;
 
+import java.io.IOException;
+import java.time.Duration;
+
 import org.aaa4j.radius.client.clients.UniversalRadiusClient;
 import org.aaa4j.radius.client.transport.BaseTransportConfig;
 import org.aaa4j.radius.client.transport.TransportType;
-
 import org.aaa4j.radius.core.packet.Packet;
 import org.aaa4j.radius.core.packet.packets.AccessRequest;
-
-import java.time.Duration;
 
 /**
  * Примеры использования универсального RADIUS клиента с различными транспортами.
@@ -88,7 +88,11 @@ public class UniversalClientExamples {
         } catch (Exception e) {
             System.err.println("Error: " + e.getMessage());
         } finally {
-            client.close();
+            try {
+                client.close();
+            } catch (IOException e) {
+                System.err.println("Error closing client: " + e.getMessage());
+            }
         }
     }
 
@@ -206,7 +210,11 @@ public class UniversalClientExamples {
         } catch (Exception e) {
             System.err.println("Performance test error: " + e.getMessage());
         } finally {
-            client.close();
+            try {
+                client.close();
+            } catch (IOException e) {
+                System.err.println("Error closing client: " + e.getMessage());
+            }
         }
     }
 } 

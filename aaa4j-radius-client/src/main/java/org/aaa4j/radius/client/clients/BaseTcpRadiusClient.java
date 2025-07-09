@@ -16,22 +16,6 @@
 
 package org.aaa4j.radius.client.clients;
 
-import org.aaa4j.radius.client.AsyncRadiusClient;
-import org.aaa4j.radius.client.ConnectionManager;
-import org.aaa4j.radius.client.RadiusClient;
-import org.aaa4j.radius.client.RadiusClientException;
-import org.aaa4j.radius.client.RetransmissionStrategy;
-import org.aaa4j.radius.client.IntervalRetransmissionStrategy;
-import org.aaa4j.radius.core.dictionary.Dictionary;
-import org.aaa4j.radius.core.dictionary.dictionaries.StandardDictionary;
-import org.aaa4j.radius.core.packet.IncrementingPacketIdGenerator;
-import org.aaa4j.radius.core.packet.Packet;
-import org.aaa4j.radius.core.packet.PacketCodec;
-import org.aaa4j.radius.core.packet.PacketCodecException;
-import org.aaa4j.radius.core.packet.PacketIdGenerator;
-import org.aaa4j.radius.core.util.RandomProvider;
-import org.aaa4j.radius.core.util.SecureRandomProvider;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -44,6 +28,22 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.aaa4j.radius.client.AsyncRadiusClient;
+import org.aaa4j.radius.client.ConnectionManager;
+import org.aaa4j.radius.client.IntervalRetransmissionStrategy;
+import org.aaa4j.radius.client.RadiusClient;
+import org.aaa4j.radius.client.RadiusClientException;
+import org.aaa4j.radius.client.RetransmissionStrategy;
+import org.aaa4j.radius.core.dictionary.Dictionary;
+import org.aaa4j.radius.core.dictionary.dictionaries.StandardDictionary;
+import org.aaa4j.radius.core.packet.IncrementingPacketIdGenerator;
+import org.aaa4j.radius.core.packet.Packet;
+import org.aaa4j.radius.core.packet.PacketCodec;
+import org.aaa4j.radius.core.packet.PacketCodecException;
+import org.aaa4j.radius.core.packet.PacketIdGenerator;
+import org.aaa4j.radius.core.util.RandomProvider;
+import org.aaa4j.radius.core.util.SecureRandomProvider;
 
 /*
  * Базовый абстрактный TCP-клиент для RADIUS. Предоставляет общую логику управления соединением, поддержки асинхронных запросов,
@@ -369,12 +369,24 @@ public abstract class BaseTcpRadiusClient implements RadiusClient, AsyncRadiusCl
     }
 
     @Override
-    public CompletableFuture<Void> close() {
+    public CompletableFuture<Void> closeAsync() {
         return disconnect().thenRun(() -> {
             if (executorService != null && !executorService.isShutdown()) {
                 executorService.shutdown();
             }
         });
+    }
+
+    @Override
+    public void close() throws IOException {
+        try {
+            closeAsync().get();
+        } catch (Exception e) {
+            if (e instanceof IOException) {
+                throw (IOException) e;
+            }
+            throw new IOException("Failed to close TCP client", e);
+        }
     }
 
     /**

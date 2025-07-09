@@ -16,19 +16,19 @@
 
 package org.aaa4j.radius.client.examples;
 
-import org.aaa4j.radius.client.clients.RadSecRadiusClient;
-import org.aaa4j.radius.client.clients.TcpRadiusClient;
-import org.aaa4j.radius.client.clients.UdpRadiusClient;
-import org.aaa4j.radius.client.IntervalRetransmissionStrategy;
-import org.aaa4j.radius.client.RetransmissionStrategy;
-import org.aaa4j.radius.core.packet.Packet;
-import org.aaa4j.radius.core.packet.packets.AccessRequest;
-
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+
+import org.aaa4j.radius.client.IntervalRetransmissionStrategy;
+import org.aaa4j.radius.client.clients.RadSecRadiusClient;
+import org.aaa4j.radius.client.clients.TcpRadiusClient;
+import org.aaa4j.radius.client.clients.UdpRadiusClient;
+import org.aaa4j.radius.core.packet.Packet;
+import org.aaa4j.radius.core.packet.packets.AccessRequest;
 
 /**
  * Examples demonstrating how to use the different RADIUS client implementations.
@@ -108,7 +108,11 @@ public class ClientExamples {
             System.out.println("TCP Response: " + response.getCode());
 
             // Close the connection
-            client.close().get();
+            try {
+                client.close();
+            } catch (IOException e) {
+                System.err.println("Error closing TCP client: " + e.getMessage());
+            }
             
         } catch (Exception e) {
             System.err.println("TCP Client Error: " + e.getMessage());
@@ -151,7 +155,11 @@ public class ClientExamples {
             System.out.println("RadSec Response: " + response.getCode());
 
             // Close the connection
-            client.close().get();
+            try {
+                client.close();
+            } catch (IOException e) {
+                System.err.println("Error closing RadSec client: " + e.getMessage());
+            }
             
         } catch (Exception e) {
             System.err.println("RadSec Client Error: " + e.getMessage());
@@ -196,7 +204,11 @@ public class ClientExamples {
             Thread.sleep(2000);
 
             // Close the connection
-            client.close().get();
+            try {
+                client.close();
+            } catch (IOException e) {
+                System.err.println("Error closing async client: " + e.getMessage());
+            }
             executor.shutdown();
             
         } catch (Exception e) {

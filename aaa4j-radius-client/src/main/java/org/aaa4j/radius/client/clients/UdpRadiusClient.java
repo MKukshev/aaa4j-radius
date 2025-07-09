@@ -16,6 +16,15 @@
 
 package org.aaa4j.radius.client.clients;
 
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
+import java.net.SocketTimeoutException;
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.Objects;
+
 import org.aaa4j.radius.client.IntervalRetransmissionStrategy;
 import org.aaa4j.radius.client.RadiusClient;
 import org.aaa4j.radius.client.RadiusClientException;
@@ -29,15 +38,6 @@ import org.aaa4j.radius.core.packet.PacketCodecException;
 import org.aaa4j.radius.core.packet.PacketIdGenerator;
 import org.aaa4j.radius.core.util.RandomProvider;
 import org.aaa4j.radius.core.util.SecureRandomProvider;
-
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetSocketAddress;
-import java.net.SocketTimeoutException;
-import java.time.Duration;
-import java.util.Arrays;
-import java.util.Objects;
 
 /**
  * A client using UDP as the underlying transport layer. Create an instance using {@link Builder}.
@@ -172,6 +172,12 @@ public class UdpRadiusClient implements RadiusClient {
         Duration overhead = Duration.ofSeconds(2);
         
         return totalTimeout.plus(overhead);
+    }
+
+    @Override
+    public void close() throws IOException {
+        // UDP client doesn't maintain persistent connections, so there's nothing to close
+        // This method is implemented for interface compliance
     }
 
     /**
